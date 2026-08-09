@@ -2,7 +2,7 @@
 
 An AI-powered spaced-repetition study platform. Paste your study material, let AI generate quizzes from it, and review with an SM-2 scheduling engine that prioritizes what you keep forgetting.
 
-**[Live Demo →]https://smart-study-saas-jdc4-61kqwrbdv-adityaaryas182-1622s-projects.vercel.app/** · Built with Next.js 16, Supabase, and Google Gemini.
+**[Live Demo →](https://smart-study-saas-jdc4-61kqwrbdv-adityaaryas182-1622s-projects.vercel.app)** · Built with Next.js 16, Supabase, and Google Gemini.
 
 ---
 
