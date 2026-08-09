@@ -3,6 +3,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Sparkles, Loader2 } from 'lucide-react'
 
 export default function GenerateQuizButton({ materialId }: { materialId: string }) {
   const router = useRouter()
@@ -22,16 +23,15 @@ export default function GenerateQuizButton({ materialId }: { materialId: string 
 
       if (data.ok) {
         setStatus('success')
-        setMessage(`${data.questions.length} soal dibuat! Sisa kredit: ${data.new_balance}`)
-        router.refresh() // segarkan data server (mis. kalau nanti tampilkan jumlah soal)
+        setMessage(`${data.questions.length} soal dibuat · sisa ${data.new_balance} kredit`)
+        router.refresh()
       } else {
         setStatus('error')
-        // Terjemahkan kode error jadi pesan ramah.
-        const msg =
+        setMessage(
           data.error === 'INSUFFICIENT_CREDITS' ? 'Kredit habis.' :
           data.error === 'AI_GENERATION_FAILED' ? 'AI gagal, coba lagi.' :
           'Gagal membuat kuis.'
-        setMessage(msg)
+        )
       }
     } catch {
       setStatus('error')
@@ -40,18 +40,22 @@ export default function GenerateQuizButton({ materialId }: { materialId: string 
   }
 
   return (
-    <div className="mt-3">
+    <div className="flex items-center gap-3">
       <button
         onClick={handleGenerate}
         disabled={status === 'loading'}
-        className="rounded bg-black px-3 py-1.5 text-sm text-white disabled:opacity-40"
+        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900 disabled:opacity-50"
       >
+        {status === 'loading'
+          ? <Loader2 size={13} className="animate-spin" />
+          : <Sparkles size={13} strokeWidth={2} />}
         {status === 'loading' ? 'Membuat soal…' : 'Generate Kuis'}
       </button>
+
       {message && (
-        <p className={`mt-2 text-sm ${status === 'success' ? 'text-green-600' : 'text-red-600'}`}>
+        <span className={`text-xs ${status === 'success' ? 'text-emerald-600' : 'text-red-600'}`}>
           {message}
-        </p>
+        </span>
       )}
     </div>
   )
