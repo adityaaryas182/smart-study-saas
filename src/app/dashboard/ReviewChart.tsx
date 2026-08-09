@@ -50,7 +50,7 @@ export default function ReviewChart({ data }: { data: ChartData[] }) {
           }}
           labelStyle={{ color: '#64748b', marginBottom: 2 }}
           itemStyle={{ color: '#0f172a' }}
-          formatter={(value: number) => [`${value} soal`, 'Review']}
+          formatter={(value) => [`${Number(value ?? 0)} soal`, 'Review']}
         />
 
         <Area

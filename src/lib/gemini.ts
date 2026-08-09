@@ -3,7 +3,6 @@ import { GoogleGenAI } from '@google/genai'
 import { QuizSchema, type Question } from './validation'
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
-console.log('[gemini] key prefix:', process.env.GEMINI_API_KEY?.slice(0, 8), '| length:', process.env.GEMINI_API_KEY?.length)
 const MODEL = 'gemini-3.5-flash' // model free-tier; bisa diganti flash lain jika perlu
 
 function buildPrompt(content: string, count: number): string {
