@@ -62,6 +62,12 @@ export default async function Home() {
             <span className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm">
               <span className="tabular-nums text-slate-900">{profile?.credits ?? 0}</span> kredit
             </span>
+            <Link
+              href="/billing"
+              className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
+            >
+              Langganan
+            </Link>
             <form action={signOut}>
               <button className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900">
                 Keluar

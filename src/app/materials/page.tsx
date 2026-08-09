@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { deleteMaterial } from './actions'
 import AddMaterialForm from './AddMaterialForm'
 import GenerateQuizButton from './GenerateQuizButton'
+import { isProUser, materialLimit } from '@/lib/subscription'
 
 export default async function MaterialsPage({
   searchParams,
@@ -22,6 +23,19 @@ export default async function MaterialsPage({
     .from('materials')
     .select('id, title, content, created_at')
     .order('created_at', { ascending: false })
+
+  // Ambil profil user beserta plan & subscription_status
+  const { data: profile } = await supabase
+    .from('users')
+    .select('plan, subscription_status')
+    .eq('id', user.id)
+    .single()
+
+  // Menggunakan helper dari file subscription
+  const isPro = isProUser(profile)
+  const limit = materialLimit(profile)
+  const used = materials?.length ?? 0
+  const atLimit = used >= limit
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -45,23 +59,58 @@ export default async function MaterialsPage({
           </Link>
         </div>
 
-        {/* Notifikasi */}
+        {/* Indikator kuota */}
+        <div className="mb-6 flex items-center justify-between rounded-lg border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+          <span className="text-sm text-slate-600">
+            <span className="font-medium tabular-nums text-slate-900">{used}</span>
+            <span className="text-slate-400"> / {limit} materi</span>
+            <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wider text-slate-500">
+              {isPro ? 'pro' : 'free'}
+            </span>
+          </span>
+          {!isPro && (
+            <Link href="/billing" className="text-xs font-medium text-indigo-600 hover:underline">
+              Upgrade ke Pro
+            </Link>
+          )}
+        </div>
+
+        {/* Notifikasi message */}
         {message && (
           <div className="mb-6 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
             {message}
           </div>
         )}
+        
+        {/* Notifikasi error */}
         {error && (
           <div className="mb-6 rounded-md border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-800">
             {error}
           </div>
         )}
 
-        <AddMaterialForm />
-
+        {/* Form Add atau Peringatan Kuota Penuh */}
+        {atLimit ? (
+          <div className="mb-8 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+            Kuota materi penuh.{' '}
+            {!isPro ? (
+              <>
+                <Link href="/billing" className="font-medium text-indigo-600 hover:underline">
+                  Upgrade ke Pro
+                </Link>{' '}
+                untuk menambah hingga 50 materi.
+              </>
+            ) : (
+              'Hapus materi lama untuk menambah yang baru.'
+            )}
+          </div>
+        ) : (
+          <AddMaterialForm />
+        )}
+        
         {/* Daftar materi */}
         {(!materials || materials.length === 0) ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white/50 p-12 text-center">
+          <div className="mt-8 rounded-xl border border-dashed border-slate-300 bg-white/50 p-12 text-center">
             <FileText size={20} className="mx-auto mb-3 text-slate-300" />
             <p className="text-sm font-medium text-slate-900">Belum ada materi</p>
             <p className="mt-1 text-sm text-slate-500">
@@ -69,7 +118,7 @@ export default async function MaterialsPage({
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="mt-8 space-y-3">
             {materials.map((m) => (
               <article
                 key={m.id}

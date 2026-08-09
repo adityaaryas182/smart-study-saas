@@ -40,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Stripe CLI binary
+stripe.exe
+
+# Log files
+*.log
+debug.log

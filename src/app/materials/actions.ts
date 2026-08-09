@@ -4,18 +4,42 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { isProUser, materialLimit } from '@/lib/subscription'
 
 export async function createMaterial(formData: FormData) {
   const supabase = await createClient()
 
-  // user_id diambil dari SESI, bukan dari form. Jangan percaya input client.
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  // Ambil DUA kolom, bukan cuma plan.
+  const { data: profile } = await supabase
+    .from('users')
+    .select('plan, subscription_status')
+    .eq('id', user.id)
+    .single()
+
+  const limit = materialLimit(profile)
+  const isPro = isProUser(profile)
+
+  const { count } = await supabase
+    .from('materials')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', user.id)
+
+  if ((count ?? 0) >= limit) {
+    redirect(
+      `/materials?error=${encodeURIComponent(
+        isPro
+          ? `Batas ${limit} materi tercapai.`
+          : `Batas ${limit} materi tercapai. Upgrade ke Pro untuk menambah lebih banyak.`
+      )}`
+    )
+  }
 
   const title = String(formData.get('title') ?? '').trim()
   const content = String(formData.get('content') ?? '').trim()
 
-  // Validasi dasar (Minggu 2 kita perketat dgn Zod di API generate).
   if (!title || !content) {
     redirect('/materials?error=Judul dan materi wajib diisi')
   }
@@ -32,6 +56,7 @@ export async function createMaterial(formData: FormData) {
   redirect('/materials?message=Materi tersimpan')
 }
 
+// deleteMaterial 
 export async function deleteMaterial(formData: FormData) {
   const supabase = await createClient()
 
@@ -40,8 +65,7 @@ export async function deleteMaterial(formData: FormData) {
 
   const id = String(formData.get('id'))
 
-  // RLS sudah menjamin user hanya bisa hapus miliknya, tapi kita
-  // tetap eksplisit .eq('user_id') sebagai defense-in-depth.
+  // RLS sudah menjamin kepemilikan, tapi .eq('user_id') = defense-in-depth.
   const { error } = await supabase
     .from('materials')
     .delete()
