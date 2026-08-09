@@ -3,13 +3,16 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
 const CREDIT_REFILL = 100 // kredit bulanan untuk Pro
 
 export async function POST(request: Request) {
+  // Inisialisasi di dalam handler (runtime), bukan level modul (build-time).
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
+  
   // WAJIB: baca body mentah. Signature dihitung dari byte asli.
   const rawBody = await request.text()
   const signature = request.headers.get('stripe-signature')
+  
   if (!signature) {
     return NextResponse.json({ error: 'NO_SIGNATURE' }, { status: 400 })
   }
