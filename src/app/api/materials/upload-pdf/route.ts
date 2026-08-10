@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     const buffer = await file.arrayBuffer()
     const pdf = await getDocumentProxy(new Uint8Array(buffer))
     const { text } = await extractText(pdf, { mergePages: true })
-    extractedText = (typeof text === 'string' ? text : text.join('\n')).trim()
+    extractedText = text.trim()
   } catch (err) {
     console.error('[upload-pdf] ekstraksi gagal:', err)
     return NextResponse.json(
