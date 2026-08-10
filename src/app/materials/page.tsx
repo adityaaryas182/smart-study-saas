@@ -21,7 +21,7 @@ export default async function MaterialsPage({
 
   const { data: materials } = await supabase
     .from('materials')
-    .select('id, title, content, created_at')
+    .select('id, title, content, created_at, questions(count)')
     .order('created_at', { ascending: false })
 
   // Ambil profil user beserta plan & subscription_status
@@ -119,43 +119,53 @@ export default async function MaterialsPage({
           </div>
         ) : (
           <div className="mt-8 space-y-3">
-            {materials.map((m) => (
-              <article
-                key={m.id}
-                className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-slate-300"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="min-w-0 flex-1">
-                    <h2 className="font-semibold tracking-tight text-slate-900">
-                      {m.title}
-                    </h2>
-                    <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-slate-500">
-                      {m.content}
-                    </p>
-                    <p className="mt-3 text-xs text-slate-400">
-                      {new Date(m.created_at).toLocaleDateString('id-ID', {
-                        day: 'numeric', month: 'long', year: 'numeric',
-                      })}
-                    </p>
+            {materials.map((m) => {
+              // Ambil jumlah soal dari hasil count (bentuknya array [{count: N}]).
+              const questionCount = (m.questions as { count: number }[] | null)?.[0]?.count ?? 0
+
+              return (
+                <article
+                  key={m.id}
+                  className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm transition-colors hover:border-slate-300"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <h2 className="font-semibold tracking-tight text-slate-900">{m.title}</h2>
+                      <p className="mt-1.5 line-clamp-2 text-sm leading-relaxed text-slate-500">{m.content}</p>
+                      <div className="mt-3 flex items-center gap-3 text-xs text-slate-400">
+                        <span>
+                          {new Date(m.created_at).toLocaleDateString('id-ID', {
+                            day: 'numeric', month: 'long', year: 'numeric',
+                          })}
+                        </span>
+                        {/* badge jumlah soal */}
+                        {questionCount > 0 && (
+                          <span className="rounded bg-slate-100 px-1.5 py-0.5 font-medium text-slate-600">
+                            {questionCount} soal
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <form action={deleteMaterial}>
+                      <input type="hidden" name="id" value={m.id} />
+                      <button
+                        type="submit"
+                        aria-label="Hapus materi"
+                        className="shrink-0 rounded-md p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+                    </form>
                   </div>
 
-                  <form action={deleteMaterial}>
-                    <input type="hidden" name="id" value={m.id} />
-                    <button
-                      type="submit"
-                      aria-label="Hapus materi"
-                      className="shrink-0 rounded-md p-2 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                    >
-                      <Trash2 size={15} />
-                    </button>
-                  </form>
-                </div>
-
-                <div className="mt-5 border-t border-slate-100 pt-4">
-                  <GenerateQuizButton materialId={m.id} />
-                </div>
-              </article>
-            ))}
+                  <div className="mt-5 border-t border-slate-100 pt-4">
+                    {/* teruskan questionCount ke tombol */}
+                    <GenerateQuizButton materialId={m.id} existingCount={questionCount} />
+                  </div>
+                </article>
+              )
+            })}
           </div>
         )}
       </main>
