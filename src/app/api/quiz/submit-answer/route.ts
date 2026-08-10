@@ -4,10 +4,12 @@ import { z } from 'zod'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
-// Client kirim OPSI yang dipilih, bukan quality_score. Server yang menilai.
 const SubmitAnswerSchema = z.object({
   question_id: z.string().uuid(),
   user_answer: z.string().min(1),
+  // Rating user saat jawaban benar: 3=Susah, 4=Sedang, 5=Mudah.
+  // Optional; kalau tak dikirim, default 4 (Sedang) untuk jawaban benar.
+  quality_rating: z.number().int().min(3).max(5).optional(),
 })
 
 export async function POST(request: Request) {
@@ -30,11 +32,11 @@ export async function POST(request: Request) {
       { status: 400 }
     )
   }
-  const { question_id, user_answer } = parsed.data
+  const { question_id, user_answer, quality_rating } = parsed.data
 
   const admin = createAdminClient()
 
-  // 1) Ambil correct_answer di server untuk penilaian (tak pernah dikirim ke client).
+  // 1) Ambil correct_answer di server untuk verifikasi (tak dikirim ke client).
   const { data: q, error: qErr } = await admin
     .from('questions')
     .select('correct_answer')
@@ -44,11 +46,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'QUESTION_NOT_FOUND' }, { status: 404 })
   }
 
-  // 2) Penilaian server-side + turunkan quality_score untuk SM-2.
   const isCorrect = user_answer === q.correct_answer
-  const qualityScore = isCorrect ? 5 : 2 // v1: benar=5, salah=2
 
-  // 3) Jalankan SM-2 via RPC yang sudah ada (RPC juga verifikasi kepemilikan soal).
+  // 2) Tentukan quality_score:
+  //    - Salah  -> selalu 2 (lapse). Rating user diabaikan (anti-curang).
+  //    - Benar  -> pakai rating user (3/4/5), default 4 kalau tak ada.
+  const qualityScore = isCorrect ? (quality_rating ?? 4) : 2
+
+  // 3) Jalankan SM-2 via RPC yang sudah ada.
   const { data: progress, error: rpcErr } = await admin.rpc('submit_answer', {
     p_user_id: user.id,
     p_question_id: question_id,
@@ -63,7 +68,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'SUBMIT_FAILED' }, { status: 500 })
   }
 
-  // 4) Kembalikan feedback: benar/salah + kunci jawaban (baru boleh muncul SETELAH menjawab).
   return NextResponse.json(
     { ok: true, is_correct: isCorrect, correct_answer: q.correct_answer, progress },
     { status: 200 }
