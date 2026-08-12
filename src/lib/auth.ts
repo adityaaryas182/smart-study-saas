@@ -8,7 +8,7 @@ export async function getAuthContext(request: Request) {
 
   // =====================================================
   // 1. Bearer Token
-  // Untuk Postman / mobile / external API
+  // Postman / mobile / external API
   // =====================================================
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7).trim()
@@ -20,9 +20,27 @@ export async function getAuthContext(request: Request) {
       }
     }
 
+    const supabaseUrl =
+      process.env.NEXT_PUBLIC_SUPABASE_URL
+
+    const supabaseKey =
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      console.error(
+        '[auth] Supabase URL/key environment variable tidak ditemukan'
+      )
+
+      return {
+        user: null,
+        supabase: null,
+      }
+    }
+
     const supabase = createSupabaseJsClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      supabaseUrl,
+      supabaseKey,
       {
         global: {
           headers: {
@@ -36,13 +54,17 @@ export async function getAuthContext(request: Request) {
       }
     )
 
-    // Validasi JWT user
     const {
       data: { user },
       error,
     } = await supabase.auth.getUser(token)
 
     if (error || !user) {
+      console.error(
+        '[auth] Bearer authentication gagal:',
+        error?.message
+      )
+
       return {
         user: null,
         supabase: null,
@@ -57,7 +79,7 @@ export async function getAuthContext(request: Request) {
 
   // =====================================================
   // 2. Cookie / SSR
-  // Untuk request dari website Next.js
+  // Website Next.js
   // =====================================================
   const supabase = await createServerClient()
 
