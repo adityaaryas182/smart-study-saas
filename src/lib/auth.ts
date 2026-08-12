@@ -1,40 +1,80 @@
-// lib/auth.ts
-import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+// src/lib/auth.ts
 
-/**
- * Ambil user terautentikasi dari header Bearer ATAU cookie.
- * - Bearer: untuk Postman, mobile, API client eksternal.
- * - Cookie: untuk request dari browser (Next.js SSR) yang sudah ada.
- * Return null kalau dua-duanya gagal.
- */
-export async function getAuthUser(request: Request) {
-  // 1) Coba Bearer token dari header Authorization
+import { createClient as createSupabaseJsClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '@/lib/supabase/server'
+
+export async function getAuthContext(request: Request) {
   const authHeader = request.headers.get('authorization')
+
+  // =====================================================
+  // 1. Bearer Token
+  // Untuk Postman / mobile / external API
+  // =====================================================
   if (authHeader?.startsWith('Bearer ')) {
     const token = authHeader.slice(7).trim()
-    const supabase = createClient(
+
+    if (!token) {
+      return {
+        user: null,
+        supabase: null,
+      }
+    }
+
+    const supabase = createSupabaseJsClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
     )
-    // getUser(token) memvalidasi JWT ke server Supabase -> aman, tak bisa dipalsukan
-    const { data: { user }, error } = await supabase.auth.getUser(token)
-    if (!error && user) return user
+
+    // Validasi JWT user
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(token)
+
+    if (error || !user) {
+      return {
+        user: null,
+        supabase: null,
+      }
+    }
+
+    return {
+      user,
+      supabase,
+    }
   }
 
-  // 2) Fallback: baca session dari cookie (request dari browser)
-  const cookieStore = await cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: () => {}, // route handler read-only, tak perlu menulis cookie
-      },
+  // =====================================================
+  // 2. Cookie / SSR
+  // Untuk request dari website Next.js
+  // =====================================================
+  const supabase = await createServerClient()
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
+  if (error || !user) {
+    return {
+      user: null,
+      supabase: null,
     }
-  )
-  const { data: { user } } = await supabase.auth.getUser()
-  return user
+  }
+
+  return {
+    user,
+    supabase,
+  }
 }
