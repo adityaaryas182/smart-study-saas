@@ -1,6 +1,6 @@
 // src/app/api/generate-quiz/route.ts
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { GenerateQuizRequestSchema } from '@/lib/validation'
 import { generateQuizOnce } from '@/lib/gemini'
@@ -10,10 +10,13 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
 export async function POST(request: Request) {
   // --- Auth ---
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 })
+  const { user, supabase } = await getAuthContext(request)
+
+  if (!user || !supabase) {
+    return NextResponse.json(
+      { error: 'UNAUTHENTICATED' },
+      { status: 401 }
+    )
   }
 
   // --- Validasi body ---
