@@ -1,7 +1,7 @@
 // src/app/api/quiz/submit-answer/route.ts
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthContext } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 const SubmitAnswerSchema = z.object({
@@ -13,8 +13,9 @@ const SubmitAnswerSchema = z.object({
 })
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Menggunakan helper autentikasi terpusat yang membaca dari Header (Postman) / Cookie (Web)
+  const { user } = await getAuthContext(request)
+  
   if (!user) {
     return NextResponse.json({ error: 'UNAUTHENTICATED' }, { status: 401 })
   }
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
   } catch {
     return NextResponse.json({ error: 'INVALID_JSON_BODY' }, { status: 400 })
   }
+  
   const parsed = SubmitAnswerSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
@@ -42,6 +44,7 @@ export async function POST(request: Request) {
     .select('correct_answer')
     .eq('id', question_id)
     .single()
+    
   if (qErr || !q) {
     return NextResponse.json({ error: 'QUESTION_NOT_FOUND' }, { status: 404 })
   }
@@ -59,6 +62,7 @@ export async function POST(request: Request) {
     p_question_id: question_id,
     p_quality_score: qualityScore,
   })
+  
   if (rpcErr) {
     const msg = rpcErr.message || ''
     if (msg.includes('QUESTION_FORBIDDEN') || msg.includes('QUESTION_NOT_FOUND')) {
