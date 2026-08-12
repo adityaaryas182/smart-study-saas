@@ -1,26 +1,63 @@
 // src/lib/validation.ts
+
 import { z } from 'zod'
 
-// Satu soal. .refine memastikan correct_answer benar-benar ADA di options —
-// validasi semantik, bukan cuma struktur.
-export const QuestionSchema = z
-  .object({
-    question_text: z.string().min(1),
-    options: z.array(z.string().min(1)).length(4), // pilihan ganda A-D
-    correct_answer: z.string().min(1),
-  })
-  .refine((q) => q.options.includes(q.correct_answer), {
-    message: 'correct_answer harus salah satu dari options',
-    path: ['correct_answer'],
-  })
+// =====================================================
+// FORMAT QUESTION INTERNAL
+//
+// correct_index adalah sumber jawaban benar.
+// 0 = pilihan pertama
+// 1 = pilihan kedua
+// 2 = pilihan ketiga
+// 3 = pilihan keempat
+// =====================================================
+export const QuestionSchema = z.object({
+  question_text: z
+    .string()
+    .min(1),
 
-export const QuizSchema = z.array(QuestionSchema).min(1).max(10)
+  options: z
+    .array(
+      z.string().min(1)
+    )
+    .length(4),
 
-// Validasi request masuk. Client HANYA kirim material_id — text-nya
-// kita ambil dari DB (lebih aman, tak bisa dipalsukan).
-export const GenerateQuizRequestSchema = z.object({
-  material_id: z.string().uuid(),
-  count: z.number().int().min(1).max(10).optional().default(5),
+  correct_index: z
+    .number()
+    .int()
+    .min(0)
+    .max(3),
 })
 
-export type Question = z.infer<typeof QuestionSchema>
+// Maksimal 10 soal per generation
+export const QuizSchema = z
+  .array(QuestionSchema)
+  .min(1)
+  .max(10)
+
+// =====================================================
+// REQUEST GENERATE QUIZ
+//
+// Client hanya mengirim:
+// - material_id
+// - count (opsional)
+//
+// Isi material tetap diambil dari database.
+// =====================================================
+export const GenerateQuizRequestSchema =
+  z.object({
+    material_id: z
+      .string()
+      .uuid(),
+
+    count: z
+      .number()
+      .int()
+      .min(1)
+      .max(10)
+      .optional()
+      .default(5),
+  })
+
+export type Question =
+  z.infer<typeof QuestionSchema>
