@@ -5,6 +5,10 @@ import { getAuthContext } from '@/lib/auth'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { GenerateQuizRequestSchema } from '@/lib/validation'
 import { generateQuizOnce } from '@/lib/gemini'
+import {
+  toClientQuestion,
+  type DbQuestion,
+} from '@/lib/serializers'
 
 const MAX_ATTEMPTS = 3
 
@@ -15,8 +19,8 @@ export async function POST(request: Request) {
   // =====================================================
   // AUTH
   // Mendukung:
-  // - Bearer Token dari Postman/mobile
-  // - Cookie dari website
+  // - Bearer Token dari Postman / mobile / API eksternal
+  // - Cookie dari website Next.js
   // =====================================================
   const { user, supabase } = await getAuthContext(request)
 
@@ -67,8 +71,7 @@ export async function POST(request: Request) {
 
   // =====================================================
   // AMBIL MATERIAL
-  // Client ini membawa session user / Bearer JWT.
-  // Jadi RLS tetap bekerja.
+  // Client membawa JWT/session user sehingga RLS tetap aktif
   // =====================================================
   const {
     data: material,
@@ -92,6 +95,7 @@ export async function POST(request: Request) {
 
   // =====================================================
   // STEP 1: CEK CREDIT
+  // Fast-fail sebelum memanggil AI
   // =====================================================
   const {
     data: profile,
@@ -125,7 +129,7 @@ export async function POST(request: Request) {
   }
 
   // =====================================================
-  // STEP 2: GENERATE QUIZ DENGAN GEMINI
+  // STEP 2: GENERATE QUIZ
   // Retry maksimal 3 kali
   // =====================================================
   let questions = null
@@ -142,6 +146,7 @@ export async function POST(request: Request) {
         count
       )
 
+      // Sukses -> keluar dari retry loop
       break
     } catch (err: unknown) {
       let status: unknown
@@ -170,7 +175,8 @@ export async function POST(request: Request) {
         `[generate-quiz] attempt ${attempt} gagal: ${lastError}`
       )
 
-      // Backoff untuk rate-limit / service unavailable
+      // Rate limit / service unavailable
+      // 500ms -> 1s -> 2s
       if (status === 429 || status === 503) {
         await sleep(
           500 * 2 ** (attempt - 1)
@@ -181,7 +187,7 @@ export async function POST(request: Request) {
 
   // =====================================================
   // SEMUA ATTEMPT GAGAL
-  // Jangan potong kredit
+  // Kredit tidak dipotong
   // =====================================================
   if (!questions) {
     return NextResponse.json(
@@ -196,8 +202,8 @@ export async function POST(request: Request) {
   }
 
   // =====================================================
-  // STEP 3: SIMPAN SECARA ATOMIK
-  // Admin client menggunakan service role
+  // STEP 3: SIMPAN ATOMIK VIA RPC
+  // Admin client menggunakan service role / bypass RLS
   // =====================================================
   const admin = createAdminClient()
 
@@ -215,10 +221,9 @@ export async function POST(request: Request) {
   )
 
   if (rpcError) {
-    const message =
-      rpcError.message || ''
+    const message = rpcError.message || ''
 
-    // Credit habis ketika proses berlangsung
+    // Kredit habis di antara guard clause dan transaksi RPC
     if (
       message.includes(
         'INSUFFICIENT_CREDITS'
@@ -234,6 +239,7 @@ export async function POST(request: Request) {
       )
     }
 
+    // Material tidak ada atau bukan milik user
     if (
       message.includes(
         'MATERIAL_FORBIDDEN'
@@ -269,11 +275,26 @@ export async function POST(request: Request) {
 
   // =====================================================
   // SUCCESS
+  //
+  // correct_answer TETAP tersimpan di database,
+  // tetapi tidak pernah dikirim ke client.
   // =====================================================
+  const {
+    questions: persisted,
+    ...meta
+  } = (result ?? {}) as {
+    questions?: DbQuestion[]
+    [key: string]: unknown
+  }
+
+  const safeQuestions =
+    (persisted ?? []).map(toClientQuestion)
+
   return NextResponse.json(
     {
       ok: true,
-      ...result,
+      ...meta,
+      questions: safeQuestions,
     },
     {
       status: 201,
