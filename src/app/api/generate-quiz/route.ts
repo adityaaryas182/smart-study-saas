@@ -22,7 +22,8 @@ export async function POST(request: Request) {
   // - Bearer Token dari Postman / mobile / API eksternal
   // - Cookie dari website Next.js
   // =====================================================
-  const { user, supabase } = await getAuthContext(request)
+  const { user, supabase } =
+    await getAuthContext(request)
 
   if (!user || !supabase) {
     return NextResponse.json(
@@ -53,7 +54,8 @@ export async function POST(request: Request) {
     )
   }
 
-  const parsed = GenerateQuizRequestSchema.safeParse(body)
+  const parsed =
+    GenerateQuizRequestSchema.safeParse(body)
 
   if (!parsed.success) {
     return NextResponse.json(
@@ -130,10 +132,24 @@ export async function POST(request: Request) {
 
   // =====================================================
   // STEP 2: GENERATE QUIZ
-  // Retry maksimal 3 kali
+  //
+  // Retry untuk error sementara.
+  //
+  // - 429:
+  //   rate limit / quota exhausted.
+  //   Stop langsung agar tidak membuang request tambahan.
+  //
+  // - 503:
+  //   AI sedang overloaded/unavailable.
+  //   Retry dengan exponential backoff.
+  //
+  // - Error lain:
+  //   Termasuk JSON/Zod invalid.
+  //   Tetap retry tanpa delay.
   // =====================================================
   let questions = null
   let lastError = ''
+  let lastStatus: number | null = null
 
   for (
     let attempt = 1;
@@ -149,7 +165,7 @@ export async function POST(request: Request) {
       // Sukses -> keluar dari retry loop
       break
     } catch (err: unknown) {
-      let status: unknown
+      let status: number | null = null
 
       if (err instanceof Error) {
         lastError = err.message
@@ -157,6 +173,11 @@ export async function POST(request: Request) {
         lastError = 'unknown'
       }
 
+      // @google/genai ApiError menyediakan
+      // HTTP status melalui property .status.
+      //
+      // .code tetap kita cek sebagai fallback
+      // supaya lebih defensif terhadap bentuk error lain.
       if (
         typeof err === 'object' &&
         err !== null
@@ -166,33 +187,122 @@ export async function POST(request: Request) {
           code?: unknown
         }
 
-        status =
+        const rawStatus =
           possibleError.status ??
           possibleError.code
+
+        status =
+          typeof rawStatus === 'number'
+            ? rawStatus
+            : null
       }
 
+      lastStatus = status
+
       console.warn(
-        `[generate-quiz] attempt ${attempt} gagal: ${lastError}`
+        `[generate-quiz] attempt ${attempt} gagal ` +
+          `(status ${status ?? 'unknown'}): ${lastError}`
       )
 
-      // Rate limit / service unavailable
-      // 500ms -> 1s -> 2s
-      if (status === 429 || status === 503) {
+      // =================================================
+      // 429
+      //
+      // Bisa berarti RPM, TPM, RPD,
+      // atau quota/rate limit Gemini lainnya.
+      //
+      // Retry langsung biasanya tidak membantu,
+      // jadi stop supaya request tidak sia-sia.
+      // =================================================
+      if (status === 429) {
+        break
+      }
+
+      // =================================================
+      // 503
+      //
+      // Service/model sedang sibuk sementara.
+      // Layak retry dengan exponential backoff:
+      //
+      // attempt 1 -> 500ms
+      // attempt 2 -> 1000ms
+      //
+      // Jangan sleep kalau sudah attempt terakhir.
+      // =================================================
+      if (
+        status === 503 &&
+        attempt < MAX_ATTEMPTS
+      ) {
         await sleep(
           500 * 2 ** (attempt - 1)
         )
       }
+
+      // =================================================
+      // Error lain:
+      //
+      // Misalnya AI menghasilkan JSON invalid
+      // atau hasil gagal schema validation.
+      //
+      // generateQuizOnce akan throw,
+      // lalu loop mencoba lagi tanpa delay.
+      // =================================================
     }
   }
 
   // =====================================================
   // SEMUA ATTEMPT GAGAL
-  // Kredit tidak dipotong
+  //
+  // Penting:
+  // generate_and_persist belum dipanggil,
+  // sehingga kredit BELUM dipotong.
   // =====================================================
   if (!questions) {
+    // ---------------------------------------------------
+    // Gemini rate limit / quota exhausted
+    // ---------------------------------------------------
+    if (lastStatus === 429) {
+      return NextResponse.json(
+        {
+          error: 'AI_QUOTA_EXCEEDED',
+          message:
+            'Batas penggunaan AI sedang tercapai. Coba lagi beberapa saat atau periksa kuota Gemini.',
+        },
+        {
+          status: 429,
+        }
+      )
+    }
+
+    // ---------------------------------------------------
+    // Gemini service unavailable / overloaded
+    // ---------------------------------------------------
+    if (lastStatus === 503) {
+      return NextResponse.json(
+        {
+          error: 'AI_UNAVAILABLE',
+          message:
+            'AI sedang sibuk. Coba lagi beberapa saat.',
+        },
+        {
+          status: 503,
+        }
+      )
+    }
+
+    // ---------------------------------------------------
+    // Error lain
+    //
+    // Contoh:
+    // - JSON dari AI invalid
+    // - Zod validation gagal
+    // - response AI tidak sesuai schema
+    // - error tidak dikenal
+    // ---------------------------------------------------
     return NextResponse.json(
       {
         error: 'AI_GENERATION_FAILED',
+        message:
+          'AI gagal membuat soal dari materi ini. Coba lagi atau gunakan materi lain.',
         detail: lastError,
       },
       {
@@ -203,7 +313,18 @@ export async function POST(request: Request) {
 
   // =====================================================
   // STEP 3: SIMPAN ATOMIK VIA RPC
-  // Admin client menggunakan service role / bypass RLS
+  //
+  // Admin client menggunakan service role / bypass RLS.
+  //
+  // Semua operasi penting dilakukan dalam satu
+  // transaction PostgreSQL:
+  //
+  // - simpan questions
+  // - buat user_progress
+  // - kurangi credit
+  // - catat credit_transactions
+  //
+  // Kredit baru dipotong setelah AI berhasil.
   // =====================================================
   const admin = createAdminClient()
 
@@ -223,7 +344,18 @@ export async function POST(request: Request) {
   if (rpcError) {
     const message = rpcError.message || ''
 
-    // Kredit habis di antara guard clause dan transaksi RPC
+    // ===================================================
+    // Kredit habis di antara:
+    //
+    // guard clause
+    //        ↓
+    // generate AI
+    //        ↓
+    // transaksi RPC
+    //
+    // Bisa terjadi karena concurrent request.
+    // RPC tetap menjadi sumber kebenaran terakhir.
+    // ===================================================
     if (
       message.includes(
         'INSUFFICIENT_CREDITS'
@@ -239,7 +371,12 @@ export async function POST(request: Request) {
       )
     }
 
-    // Material tidak ada atau bukan milik user
+    // ===================================================
+    // Material tidak ada atau bukan milik user.
+    //
+    // RPC tetap melakukan validasi ownership
+    // walaupun sebelumnya sudah dibaca melalui RLS.
+    // ===================================================
     if (
       message.includes(
         'MATERIAL_FORBIDDEN'
@@ -278,6 +415,9 @@ export async function POST(request: Request) {
   //
   // correct_answer TETAP tersimpan di database,
   // tetapi tidak pernah dikirim ke client.
+  //
+  // Client hanya menerima versi aman melalui
+  // toClientQuestion().
   // =====================================================
   const {
     questions: persisted,
@@ -288,7 +428,9 @@ export async function POST(request: Request) {
   }
 
   const safeQuestions =
-    (persisted ?? []).map(toClientQuestion)
+    (persisted ?? []).map(
+      toClientQuestion
+    )
 
   return NextResponse.json(
     {
