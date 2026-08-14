@@ -44,13 +44,19 @@ export default function MiniReviewChart({
             y2="1"
           >
             <stop
-              offset="5%"
+              offset="0%"
               stopColor="#4F46E5"
-              stopOpacity={0.16}
+              stopOpacity={0.28}
             />
 
             <stop
-              offset="95%"
+              offset="55%"
+              stopColor="#6366F1"
+              stopOpacity={0.09}
+            />
+
+            <stop
+              offset="100%"
               stopColor="#4F46E5"
               stopOpacity={0}
             />
@@ -60,7 +66,7 @@ export default function MiniReviewChart({
         <CartesianGrid
           strokeDasharray="3 3"
           vertical={false}
-          stroke="#e2e8f0"
+          stroke="#E2E8F0"
         />
 
         <XAxis
@@ -69,31 +75,32 @@ export default function MiniReviewChart({
           tickLine={false}
           tick={{
             fontSize: 11,
-            fill: '#94a3b8',
+            fill: '#94A3B8',
           }}
           dy={8}
         />
 
         <Tooltip
           cursor={{
-            stroke: '#c7d2fe',
+            stroke: '#C7D2FE',
             strokeWidth: 1,
             strokeDasharray: '4 4',
           }}
           contentStyle={{
-            borderRadius: '8px',
-            border: '1px solid #e2e8f0',
+            borderRadius: '10px',
+            border:
+              '1px solid #E2E8F0',
             boxShadow:
-              '0 4px 12px rgb(15 23 42 / 0.08)',
+              '0 8px 24px rgb(15 23 42 / 0.08)',
             fontSize: 12,
-            padding: '6px 10px',
+            padding: '7px 10px',
           }}
           labelStyle={{
-            color: '#64748b',
+            color: '#64748B',
             marginBottom: 2,
           }}
           itemStyle={{
-            color: '#4f46e5',
+            color: '#4F46E5',
           }}
           formatter={(value) => [
             `${Number(value ?? 0)} soal`,
@@ -105,13 +112,13 @@ export default function MiniReviewChart({
           type="monotone"
           dataKey="jumlah"
           stroke="#4F46E5"
-          strokeWidth={2}
-          fillOpacity={1}
+          strokeWidth={2.25}
           fill="url(#miniReviewGradient)"
+          fillOpacity={1}
           activeDot={{
             r: 4,
             fill: '#4F46E5',
-            stroke: '#ffffff',
+            stroke: '#FFFFFF',
             strokeWidth: 2,
           }}
           isAnimationActive={false}

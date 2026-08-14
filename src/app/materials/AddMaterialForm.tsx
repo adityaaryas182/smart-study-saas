@@ -1,4 +1,5 @@
 // src/app/materials/AddMaterialForm.tsx
+
 'use client'
 
 import { useState } from 'react'
@@ -23,19 +24,30 @@ export default function AddMaterialForm() {
   const router = useRouter()
 
   const [open, setOpen] = useState(false)
-  const [mode, setMode] = useState<'text' | 'pdf' | 'docx'>('text')
+  const [mode, setMode] =
+    useState<'text' | 'pdf' | 'docx'>('text')
 
   // state khusus upload PDF
-  const [file, setFile] = useState<File | null>(null)
-  const [pdfTitle, setPdfTitle] = useState('')
-  const [uploading, setUploading] = useState(false)
-  const [pdfError, setPdfError] = useState('')
+  const [file, setFile] =
+    useState<File | null>(null)
+  const [pdfTitle, setPdfTitle] =
+    useState('')
+  const [uploading, setUploading] =
+    useState(false)
+  const [pdfError, setPdfError] =
+    useState('')
 
   // state khusus upload DOCX
-  const [docxFile, setDocxFile] = useState<File | null>(null)
-  const [docxTitle, setDocxTitle] = useState('')
-  const [docxUploading, setDocxUploading] = useState(false)
-  const [docxError, setDocxError] = useState('')
+  const [docxFile, setDocxFile] =
+    useState<File | null>(null)
+  const [docxTitle, setDocxTitle] =
+    useState('')
+  const [
+    docxUploading,
+    setDocxUploading,
+  ] = useState(false)
+  const [docxError, setDocxError] =
+    useState('')
 
   async function handlePdfUpload() {
     if (!file) return
@@ -49,10 +61,13 @@ export default function AddMaterialForm() {
       fd.append('file', file)
       fd.append('title', pdfTitle)
 
-      const res = await fetch('/api/materials/upload-pdf', {
-        method: 'POST',
-        body: fd,
-      })
+      const res = await fetch(
+        '/api/materials/upload-pdf',
+        {
+          method: 'POST',
+          body: fd,
+        }
+      )
 
       const data = await res.json()
 
@@ -62,10 +77,15 @@ export default function AddMaterialForm() {
         setPdfTitle('')
         router.refresh()
       } else {
-        setPdfError(data.message ?? 'Gagal mengunggah PDF.')
+        setPdfError(
+          data.message ??
+            'Gagal mengunggah PDF.'
+        )
       }
     } catch {
-      setPdfError('Gagal terhubung ke server.')
+      setPdfError(
+        'Gagal terhubung ke server.'
+      )
     } finally {
       setUploading(false)
     }
@@ -83,10 +103,13 @@ export default function AddMaterialForm() {
       fd.append('file', docxFile)
       fd.append('title', docxTitle)
 
-      const res = await fetch('/api/materials/upload-docx', {
-        method: 'POST',
-        body: fd,
-      })
+      const res = await fetch(
+        '/api/materials/upload-docx',
+        {
+          method: 'POST',
+          body: fd,
+        }
+      )
 
       const data = await res.json()
 
@@ -96,10 +119,15 @@ export default function AddMaterialForm() {
         setDocxTitle('')
         router.refresh()
       } else {
-        setDocxError(data.message ?? 'Gagal mengunggah DOCX.')
+        setDocxError(
+          data.message ??
+            'Gagal mengunggah DOCX.'
+        )
       }
     } catch {
-      setDocxError('Gagal terhubung ke server.')
+      setDocxError(
+        'Gagal terhubung ke server.'
+      )
     } finally {
       setDocxUploading(false)
     }
@@ -108,7 +136,8 @@ export default function AddMaterialForm() {
   function handleDocxFileChange(
     event: React.ChangeEvent<HTMLInputElement>
   ) {
-    const selectedFile = event.target.files?.[0] ?? null
+    const selectedFile =
+      event.target.files?.[0] ?? null
 
     setDocxError('')
 
@@ -117,22 +146,33 @@ export default function AddMaterialForm() {
       return
     }
 
-    const hasDocxExtension = /\.docx$/i.test(selectedFile.name)
+    const hasDocxExtension =
+      /\.docx$/i.test(selectedFile.name)
 
     const hasValidMime =
       selectedFile.type === DOCX_MIME ||
       selectedFile.type === ''
 
-    if (!hasDocxExtension || !hasValidMime) {
+    if (
+      !hasDocxExtension ||
+      !hasValidMime
+    ) {
       setDocxFile(null)
-      setDocxError('File harus berformat DOCX.')
+      setDocxError(
+        'File harus berformat DOCX.'
+      )
       event.target.value = ''
       return
     }
 
-    if (selectedFile.size > MAX_FILE_SIZE) {
+    if (
+      selectedFile.size >
+      MAX_FILE_SIZE
+    ) {
       setDocxFile(null)
-      setDocxError('Ukuran maksimal 10 MB.')
+      setDocxError(
+        'Ukuran maksimal 10 MB.'
+      )
       event.target.value = ''
       return
     }
@@ -144,9 +184,12 @@ export default function AddMaterialForm() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="mb-8 inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+        className="mb-8 inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-500/15 transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 motion-reduce:transform-none"
       >
-        <Plus size={15} strokeWidth={2.5} />
+        <Plus
+          size={15}
+          strokeWidth={2.5}
+        />
         Tambah Materi
       </button>
     )
@@ -174,7 +217,7 @@ export default function AddMaterialForm() {
           onClick={() => setMode('text')}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-sm font-medium transition ${
             mode === 'text'
-              ? 'bg-white text-slate-900 shadow-sm'
+              ? 'bg-white text-indigo-600 shadow-sm'
               : 'text-slate-500 hover:text-slate-900'
           }`}
         >
@@ -186,7 +229,7 @@ export default function AddMaterialForm() {
           onClick={() => setMode('pdf')}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-sm font-medium transition ${
             mode === 'pdf'
-              ? 'bg-white text-slate-900 shadow-sm'
+              ? 'bg-white text-indigo-600 shadow-sm'
               : 'text-slate-500 hover:text-slate-900'
           }`}
         >
@@ -195,10 +238,12 @@ export default function AddMaterialForm() {
         </button>
 
         <button
-          onClick={() => setMode('docx')}
+          onClick={() =>
+            setMode('docx')
+          }
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-sm font-medium transition ${
             mode === 'docx'
-              ? 'bg-white text-slate-900 shadow-sm'
+              ? 'bg-white text-indigo-600 shadow-sm'
               : 'text-slate-500 hover:text-slate-900'
           }`}
         >
@@ -209,7 +254,10 @@ export default function AddMaterialForm() {
 
       {mode === 'text' ? (
         // --- MODE TEKS ---
-        <form action={createMaterial} className="space-y-4">
+        <form
+          action={createMaterial}
+          className="space-y-4"
+        >
           <div>
             <label className="mb-1.5 block text-xs font-medium text-slate-600">
               Judul
@@ -220,7 +268,7 @@ export default function AddMaterialForm() {
               type="text"
               required
               placeholder="Bab 3 — Fotosintesis"
-              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
             />
           </div>
 
@@ -234,14 +282,16 @@ export default function AddMaterialForm() {
               required
               rows={7}
               placeholder="Tempel teks materi di sini."
-              className="w-full resize-y rounded-md border border-slate-200 px-3 py-2 text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+              className="w-full resize-y rounded-md border border-slate-200 px-3 py-2 text-sm leading-relaxed text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
             />
           </div>
 
           <div className="flex justify-end gap-2 pt-1">
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() =>
+                setOpen(false)
+              }
               className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
             >
               Batal
@@ -249,7 +299,7 @@ export default function AddMaterialForm() {
 
             <button
               type="submit"
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800"
+              className="rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-500/15 transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
             >
               Simpan Materi
             </button>
@@ -261,15 +311,21 @@ export default function AddMaterialForm() {
           <div>
             <label className="mb-1.5 block text-xs font-medium text-slate-600">
               Judul{' '}
-              <span className="text-slate-400">(opsional)</span>
+              <span className="text-slate-400">
+                (opsional)
+              </span>
             </label>
 
             <input
               type="text"
               value={pdfTitle}
-              onChange={(e) => setPdfTitle(e.target.value)}
+              onChange={(e) =>
+                setPdfTitle(
+                  e.target.value
+                )
+              }
               placeholder="Kosongkan untuk pakai nama file"
-              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
             />
           </div>
 
@@ -278,7 +334,7 @@ export default function AddMaterialForm() {
               File PDF
             </label>
 
-            <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-slate-400">
+            <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-indigo-300">
               <FileText
                 size={22}
                 className="text-slate-400"
@@ -295,7 +351,8 @@ export default function AddMaterialForm() {
                   </span>
 
                   <span className="text-xs text-slate-400">
-                    Maksimal 10 MB · PDF berbasis teks
+                    Maksimal 10 MB · PDF
+                    berbasis teks
                   </span>
                 </>
               )}
@@ -305,7 +362,10 @@ export default function AddMaterialForm() {
                 accept="application/pdf"
                 className="hidden"
                 onChange={(e) => {
-                  setFile(e.target.files?.[0] ?? null)
+                  setFile(
+                    e.target.files?.[0] ??
+                      null
+                  )
                   setPdfError('')
                 }}
               />
@@ -321,7 +381,9 @@ export default function AddMaterialForm() {
           <div className="flex justify-end gap-2 pt-1">
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() =>
+                setOpen(false)
+              }
               className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
             >
               Batal
@@ -329,17 +391,19 @@ export default function AddMaterialForm() {
 
             <button
               onClick={handlePdfUpload}
-              disabled={!file || uploading}
-              className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-40"
+              disabled={
+                !file || uploading
+              }
+              className="rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-500/15 transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {uploading ? (
-                <>
+                <span className="inline-flex items-center gap-1.5">
                   <Loader2
                     size={14}
                     className="animate-spin"
                   />
                   Memproses…
-                </>
+                </span>
               ) : (
                 'Upload & Simpan'
               )}
@@ -352,15 +416,21 @@ export default function AddMaterialForm() {
           <div>
             <label className="mb-1.5 block text-xs font-medium text-slate-600">
               Judul{' '}
-              <span className="text-slate-400">(opsional)</span>
+              <span className="text-slate-400">
+                (opsional)
+              </span>
             </label>
 
             <input
               type="text"
               value={docxTitle}
-              onChange={(e) => setDocxTitle(e.target.value)}
+              onChange={(e) =>
+                setDocxTitle(
+                  e.target.value
+                )
+              }
               placeholder="Kosongkan untuk pakai nama file"
-              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/5"
+              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/10"
             />
           </div>
 
@@ -369,7 +439,7 @@ export default function AddMaterialForm() {
               File DOCX
             </label>
 
-            <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-slate-400">
+            <label className="flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center transition hover:border-indigo-300">
               <FileArchive
                 size={22}
                 className="text-slate-400"
@@ -386,7 +456,8 @@ export default function AddMaterialForm() {
                   </span>
 
                   <span className="text-xs text-slate-400">
-                    Maksimal 10 MB · Microsoft Word DOCX
+                    Maksimal 10 MB ·
+                    Microsoft Word DOCX
                   </span>
                 </>
               )}
@@ -395,7 +466,9 @@ export default function AddMaterialForm() {
                 type="file"
                 accept={`.docx,${DOCX_MIME}`}
                 className="hidden"
-                onChange={handleDocxFileChange}
+                onChange={
+                  handleDocxFileChange
+                }
               />
             </label>
           </div>
@@ -409,7 +482,9 @@ export default function AddMaterialForm() {
           <div className="flex justify-end gap-2 pt-1">
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() =>
+                setOpen(false)
+              }
               className="rounded-md border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition hover:border-slate-300 hover:text-slate-900"
             >
               Batal
@@ -417,17 +492,20 @@ export default function AddMaterialForm() {
 
             <button
               onClick={handleDocxUpload}
-              disabled={!docxFile || docxUploading}
-              className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-40"
+              disabled={
+                !docxFile ||
+                docxUploading
+              }
+              className="rounded-lg bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-500/15 transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {docxUploading ? (
-                <>
+                <span className="inline-flex items-center gap-1.5">
                   <Loader2
                     size={14}
                     className="animate-spin"
                   />
                   Memproses…
-                </>
+                </span>
               ) : (
                 'Upload & Simpan'
               )}

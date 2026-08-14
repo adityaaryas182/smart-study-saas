@@ -5,9 +5,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  Sparkles,
-  Loader2,
   AlertTriangle,
+  Loader2,
+  Sparkles,
 } from 'lucide-react'
 
 export default function GenerateQuizButton({
@@ -20,14 +20,15 @@ export default function GenerateQuizButton({
   const router = useRouter()
 
   const [status, setStatus] = useState<
-    'idle' |
-    'confirming' |
-    'loading' |
-    'success' |
-    'error'
+    | 'idle'
+    | 'confirming'
+    | 'loading'
+    | 'success'
+    | 'error'
   >('idle')
 
-  const [message, setMessage] = useState('')
+  const [message, setMessage] =
+    useState('')
 
   async function doGenerate() {
     setStatus('loading')
@@ -39,7 +40,8 @@ export default function GenerateQuizButton({
         {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type':
+              'application/json',
           },
           body: JSON.stringify({
             material_id: materialId,
@@ -61,44 +63,23 @@ export default function GenerateQuizButton({
       } else {
         setStatus('error')
 
-        // Prioritas utama: pesan spesifik dari server.
-        //
-        // Contoh:
-        // AI_QUOTA_EXCEEDED
-        // -> "Batas penggunaan AI sedang tercapai..."
-        //
-        // AI_UNAVAILABLE
-        // -> "AI sedang sibuk..."
-        //
-        // AI_GENERATION_FAILED
-        // -> "AI gagal membuat soal..."
-        //
-        // Kalau server tidak memberikan message,
-        // baru gunakan fallback lokal.
         setMessage(
           data.message ??
-            (
-              data.error ===
-              'INSUFFICIENT_CREDITS'
-                ? 'Kredit habis.'
-                : 'Gagal membuat kuis.'
-            )
+            (data.error ===
+            'INSUFFICIENT_CREDITS'
+              ? 'Kredit habis.'
+              : 'Gagal membuat kuis.')
         )
       }
     } catch {
       setStatus('error')
+
       setMessage(
         'Gagal terhubung ke server.'
       )
     }
   }
 
-  // =====================================================
-  // KLIK UTAMA
-  //
-  // Kalau materi sudah memiliki soal,
-  // user harus konfirmasi sebelum generate lagi.
-  // =====================================================
   function handleClick() {
     if (
       existingCount > 0 &&
@@ -111,12 +92,9 @@ export default function GenerateQuizButton({
     doGenerate()
   }
 
-  // =====================================================
-  // MODE KONFIRMASI
-  // =====================================================
   if (status === 'confirming') {
     return (
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
         <AlertTriangle
           size={14}
           className="text-amber-500"
@@ -124,7 +102,8 @@ export default function GenerateQuizButton({
 
         <span className="text-xs text-amber-800">
           Materi ini sudah punya{' '}
-          {existingCount} soal. Tambah 5 lagi?
+          {existingCount} soal. Tambah 5
+          lagi?
         </span>
 
         <div className="ml-auto flex gap-2">
@@ -132,14 +111,14 @@ export default function GenerateQuizButton({
             onClick={() =>
               setStatus('idle')
             }
-            className="rounded border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:text-slate-900"
+            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30"
           >
             Batal
           </button>
 
           <button
             onClick={doGenerate}
-            className="rounded bg-slate-900 px-2.5 py-1 text-xs font-medium text-white transition hover:bg-slate-800"
+            className="rounded-lg bg-indigo-600 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
           >
             Ya, tambah
           </button>
@@ -148,25 +127,23 @@ export default function GenerateQuizButton({
     )
   }
 
-  // =====================================================
-  // NORMAL STATE
-  // =====================================================
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3">
       <button
         onClick={handleClick}
         disabled={status === 'loading'}
-        className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-slate-300 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50/40 hover:text-indigo-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/30 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {status === 'loading' ? (
           <Loader2
             size={13}
-            className="animate-spin"
+            className="animate-spin text-indigo-500"
           />
         ) : (
           <Sparkles
             size={13}
             strokeWidth={2}
+            className="text-indigo-500"
           />
         )}
 
